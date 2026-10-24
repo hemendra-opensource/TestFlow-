@@ -1,18 +1,26 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { AuthCard } from '../components/AuthCard.jsx';
 import { LoginForm } from '../features/auth/LoginForm.jsx';
 
 export const LoginPage = () => {
   return (
-    <div>
-      <div className="mb-6 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">
-          Welcome back
-        </h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Sign in to access your workspaces and team projects.
+    <AuthCard
+      title="Welcome back"
+      subtitle="Sign in to your account to manage workspaces and collaborate with your team."
+      footer={
+        <p className="text-xs text-slate-600">
+          Don't have an account yet?{' '}
+          <Link
+            to="/register"
+            className="font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+          >
+            Create an account
+          </Link>
         </p>
-      </div>
+      }
+    >
       <LoginForm />
-    </div>
+    </AuthCard>
   );
 };

@@ -13,6 +13,8 @@ import { ResetPasswordPage } from '../pages/ResetPasswordPage.jsx';
 import { DashboardPage } from '../pages/DashboardPage.jsx';
 import { NewWorkspacePage } from '../pages/NewWorkspacePage.jsx';
 import { ProfilePage } from '../pages/ProfilePage.jsx';
+import { WorkspaceDetailPage } from '../pages/WorkspaceDetailPage.jsx';
+import { ProjectDetailPage } from '../pages/ProjectDetailPage.jsx';
 import { NotFoundPage } from '../pages/NotFoundPage.jsx';
 
 export const router = createBrowserRouter([
@@ -42,6 +44,8 @@ export const router = createBrowserRouter([
           { path: '/', element: <Navigate to="/dashboard" replace /> },
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/workspaces/new', element: <NewWorkspacePage /> },
+          { path: '/workspaces/:id', element: <WorkspaceDetailPage /> },
+          { path: '/projects/:projectId', element: <ProjectDetailPage /> },
           { path: '/settings/profile', element: <ProfilePage /> },
         ],
       },

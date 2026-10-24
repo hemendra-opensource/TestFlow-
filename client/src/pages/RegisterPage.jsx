@@ -1,18 +1,26 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { AuthCard } from '../components/AuthCard.jsx';
 import { RegisterForm } from '../features/auth/RegisterForm.jsx';
 
 export const RegisterPage = () => {
   return (
-    <div>
-      <div className="mb-6 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">
-          Create your account
-        </h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Get started with TeamFlow in seconds.
+    <AuthCard
+      title="Create your account"
+      subtitle="Join your team on TeamFlow to manage projects, tasks, and workspaces."
+      footer={
+        <p className="text-xs text-slate-600">
+          Already have an account?{' '}
+          <Link
+            to="/login"
+            className="font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+          >
+            Sign In
+          </Link>
         </p>
-      </div>
+      }
+    >
       <RegisterForm />
-    </div>
+    </AuthCard>
   );
 };

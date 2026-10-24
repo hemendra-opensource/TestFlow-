@@ -3,6 +3,9 @@ import cors from 'cors';
 import { config } from './config/env.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import workspacesRoutes from './modules/workspaces/workspaces.routes.js';
+import { projectsRouter, workspaceProjectsRouter } from './modules/projects/projects.routes.js';
+import { tasksRouter, projectTasksRouter } from './modules/tasks/tasks.routes.js';
+import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { successResponse, errorResponse } from './utils/response.js';
 
@@ -56,10 +59,16 @@ export const createApp = () => {
 
   // Mount modules
   apiV1Router.use('/auth', authRoutes);
+  apiV1Router.use('/workspaces/:workspaceId/projects', workspaceProjectsRouter);
+  apiV1Router.use('/projects/:projectId/tasks', projectTasksRouter);
   apiV1Router.use('/workspaces', workspacesRoutes);
+  apiV1Router.use('/projects', projectsRouter);
+  apiV1Router.use('/tasks', tasksRouter);
+  apiV1Router.use('/dashboard', dashboardRoutes);
 
-  // Attach API v1 prefix
+  // Attach API prefixes: support both /api/v1 and /api
   app.use('/api/v1', apiV1Router);
+  app.use('/api', apiV1Router);
 
   // 404 handler for unmatched routes
   app.use('*', (req, res) => {

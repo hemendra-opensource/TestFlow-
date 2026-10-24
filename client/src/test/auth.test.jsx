@@ -49,7 +49,7 @@ describe('Frontend Authentication Flow & States', () => {
     );
 
     const emailInput = screen.getByLabelText(/email address/i);
-    const passwordInput = screen.getByLabelText(/password/i);
+    const passwordInput = screen.getByLabelText(/^password/i);
     const submitBtn = screen.getByRole('button', { name: /sign in to teamflow/i });
 
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
@@ -70,10 +70,10 @@ describe('Frontend Authentication Flow & States', () => {
     );
 
     const fullNameInput = screen.getByLabelText(/full name/i);
-    const emailInput = screen.getByLabelText(/email address/i);
+    const emailInput = screen.getByLabelText(/work email/i);
     const passwordInput = screen.getByLabelText(/^password/i);
     const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
-    const submitBtn = screen.getByRole('button', { name: /create account/i });
+    const submitBtn = screen.getByRole('button', { name: /create free account/i });
 
     fireEvent.change(fullNameInput, { target: { value: 'Alex Morgan' } });
     fireEvent.change(emailInput, { target: { value: 'alex@example.com' } });

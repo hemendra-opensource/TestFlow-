@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
+import { Mail, LogIn } from 'lucide-react';
 import { useAuth } from './useAuth.js';
 import { Input } from '../../components/Input.jsx';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 import { Button } from '../../components/Button.jsx';
 import { Alert } from '../../components/Alert.jsx';
 
@@ -51,7 +52,7 @@ export const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {formError && (
         <Alert type="error" title="Sign In Failed">
           {formError}
@@ -77,23 +78,11 @@ export const LoginForm = () => {
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label htmlFor="login-password" className="text-xs font-semibold text-slate-700 tracking-wide">
-            Password <span className="text-red-500">*</span>
-          </label>
-          <Link
-            to="/forgot-password"
-            className="text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
-          >
-            Forgot password?
-          </Link>
-        </div>
-        <Input
+        <PasswordInput
+          label="Password"
           id="login-password"
-          type="password"
           placeholder="••••••••"
           autoComplete="current-password"
-          leftIcon={Lock}
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
@@ -101,27 +90,28 @@ export const LoginForm = () => {
           }}
           error={errors.password}
           required
+          rightElement={
+            <Link
+              to="/forgot-password"
+              className="text-xs font-medium text-brand-600 hover:text-brand-700 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          }
         />
       </div>
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        className="w-full"
-        isLoading={isLoading}
-        leftIcon={LogIn}
-      >
-        Sign In to TeamFlow
-      </Button>
-
-      <div className="text-center pt-2">
-        <p className="text-xs text-slate-600">
-          Don't have an account yet?{' '}
-          <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
-            Create an account
-          </Link>
-        </p>
+      <div className="pt-1">
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full h-11"
+          isLoading={isLoading}
+          leftIcon={LogIn}
+        >
+          Sign In to TeamFlow
+        </Button>
       </div>
     </form>
   );

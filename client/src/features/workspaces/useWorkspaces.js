@@ -23,3 +23,46 @@ export function useCreateWorkspace() {
     },
   });
 }
+
+/**
+ * Fetches a single workspace by ID.
+ */
+export function useWorkspace(workspaceId) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: ['workspace', workspaceId],
+    queryFn: () => apiClient.get(`/workspaces/${workspaceId}`),
+    enabled: Boolean(session) && Boolean(workspaceId),
+    staleTime: 1000 * 60,
+  });
+}
+
+/**
+ * Fetches the member list for a workspace.
+ */
+export function useWorkspaceMembers(workspaceId) {
+  const { session } = useAuth();
+
+  return useQuery({
+    queryKey: ['workspace-members', workspaceId],
+    queryFn: () => apiClient.get(`/workspaces/${workspaceId}/members`),
+    enabled: Boolean(session) && Boolean(workspaceId),
+    staleTime: 1000 * 60,
+  });
+}
+
+/**
+ * Mutation to update a workspace (name, slug, description).
+ */
+export function useUpdateWorkspace(workspaceId) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (updates) => apiClient.patch(`/workspaces/${workspaceId}`, updates),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      queryClient.setQueryData(['workspace', workspaceId], updated);
+    },
+  });
+}

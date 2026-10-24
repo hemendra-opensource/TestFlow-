@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, KeyRound, CheckCircle2 } from 'lucide-react';
+import { KeyRound, CheckCircle2 } from 'lucide-react';
 import { useAuth } from './useAuth.js';
-import { Input } from '../../components/Input.jsx';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 import { Button } from '../../components/Button.jsx';
 import { Alert } from '../../components/Alert.jsx';
 
@@ -35,7 +35,7 @@ export const ResetPasswordForm = () => {
       await updatePassword(password);
       setIsSuccess(true);
     } catch (err) {
-      setError(err.message || 'Failed to reset password. The link may have expired.');
+      setError(err.message || 'Failed to reset password. The link may have expired or is invalid.');
     } finally {
       setIsLoading(false);
     }
@@ -43,17 +43,17 @@ export const ResetPasswordForm = () => {
 
   if (isSuccess) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle2 className="h-6 w-6" />
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center space-y-3">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <CheckCircle2 className="h-5 w-5" />
         </div>
-        <h3 className="text-base font-semibold text-emerald-950">Password Reset Successful</h3>
-        <p className="text-xs text-emerald-800 leading-relaxed max-w-sm mx-auto">
-          Your password has been successfully updated. You can now use your new password to sign in.
+        <h3 className="text-sm font-bold text-emerald-950">Password Updated</h3>
+        <p className="text-xs text-emerald-800 leading-relaxed">
+          Your account password has been updated securely. You can now use your new password to sign in.
         </p>
         <div className="pt-2">
           <Link to="/login">
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="sm" className="w-full">
               Proceed to Sign In
             </Button>
           </Link>
@@ -71,13 +71,11 @@ export const ResetPasswordForm = () => {
       )}
 
       <div>
-        <Input
+        <PasswordInput
           label="New Password"
           id="reset-password"
-          type="password"
           placeholder="At least 6 characters"
           autoComplete="new-password"
-          leftIcon={Lock}
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
@@ -88,13 +86,11 @@ export const ResetPasswordForm = () => {
       </div>
 
       <div>
-        <Input
+        <PasswordInput
           label="Confirm New Password"
           id="reset-confirm-password"
-          type="password"
           placeholder="Repeat new password"
           autoComplete="new-password"
-          leftIcon={Lock}
           value={confirmPassword}
           onChange={(e) => {
             setConfirmPassword(e.target.value);
@@ -104,23 +100,17 @@ export const ResetPasswordForm = () => {
         />
       </div>
 
-      <div className="pt-2">
+      <div className="pt-1">
         <Button
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full"
+          className="w-full h-11"
           isLoading={isLoading}
           leftIcon={KeyRound}
         >
           Update Password
         </Button>
-      </div>
-
-      <div className="text-center pt-2">
-        <Link to="/login" className="text-xs font-semibold text-slate-600 hover:text-brand-600 hover:underline">
-          Return to Sign In
-        </Link>
       </div>
     </form>
   );

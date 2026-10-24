@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Lock, UserPlus, CheckCircle2 } from 'lucide-react';
+import { User, Mail, UserPlus, CheckCircle2 } from 'lucide-react';
 import { useAuth } from './useAuth.js';
 import { Input } from '../../components/Input.jsx';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 import { Button } from '../../components/Button.jsx';
 import { Alert } from '../../components/Alert.jsx';
 
@@ -55,11 +56,9 @@ export const RegisterForm = () => {
         fullName: fullName.trim(),
       });
 
-      // If user requires email confirmation
       if (data.user && !data.session) {
         setIsSuccess(true);
       } else {
-        // Automatically signed in
         navigate('/dashboard');
       }
     } catch (err) {
@@ -71,19 +70,19 @@ export const RegisterForm = () => {
 
   if (isSuccess) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle2 className="h-6 w-6" />
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 text-center space-y-3">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <CheckCircle2 className="h-5 w-5" />
         </div>
-        <h3 className="text-base font-semibold text-emerald-950">Registration Successful!</h3>
-        <p className="text-xs text-emerald-800 leading-relaxed max-w-sm mx-auto">
-          We have sent a verification email to <span className="font-semibold">{email}</span>.
-          Please click the confirmation link in your email to activate your account.
+        <h3 className="text-sm font-bold text-emerald-950">Registration Successful</h3>
+        <p className="text-xs text-emerald-800 leading-relaxed">
+          We have sent a verification email to <span className="font-semibold text-emerald-950">{email}</span>.
+          Please verify your email address to access your workspaces.
         </p>
         <div className="pt-2">
           <Link to="/login">
-            <Button variant="primary" size="sm">
-              Return to Sign In
+            <Button variant="primary" size="sm" className="w-full">
+              Proceed to Sign In
             </Button>
           </Link>
         </div>
@@ -92,7 +91,7 @@ export const RegisterForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3.5">
       {formError && (
         <Alert type="error" title="Registration Failed">
           {formError}
@@ -118,7 +117,7 @@ export const RegisterForm = () => {
 
       <div>
         <Input
-          label="Email Address"
+          label="Work Email"
           id="register-email"
           type="email"
           placeholder="name@company.com"
@@ -135,13 +134,11 @@ export const RegisterForm = () => {
       </div>
 
       <div>
-        <Input
+        <PasswordInput
           label="Password"
           id="register-password"
-          type="password"
           placeholder="At least 6 characters"
           autoComplete="new-password"
-          leftIcon={Lock}
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
@@ -153,13 +150,11 @@ export const RegisterForm = () => {
       </div>
 
       <div>
-        <Input
+        <PasswordInput
           label="Confirm Password"
           id="register-confirm-password"
-          type="password"
           placeholder="Repeat password"
           autoComplete="new-password"
-          leftIcon={Lock}
           value={confirmPassword}
           onChange={(e) => {
             setConfirmPassword(e.target.value);
@@ -175,21 +170,12 @@ export const RegisterForm = () => {
           type="submit"
           variant="primary"
           size="lg"
-          className="w-full"
+          className="w-full h-11"
           isLoading={isLoading}
           leftIcon={UserPlus}
         >
-          Create Account
+          Create Free Account
         </Button>
-      </div>
-
-      <div className="text-center pt-2">
-        <p className="text-xs text-slate-600">
-          Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
-            Sign In
-          </Link>
-        </p>
       </div>
     </form>
   );

@@ -1,18 +1,23 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { AuthCard } from '../components/AuthCard.jsx';
 import { ResetPasswordForm } from '../features/auth/ResetPasswordForm.jsx';
 
 export const ResetPasswordPage = () => {
   return (
-    <div>
-      <div className="mb-6 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">
-          Create new password
-        </h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Enter your new password below to regain account access.
-        </p>
-      </div>
+    <AuthCard
+      title="Create new password"
+      subtitle="Choose a strong, secure password for your account."
+      footer={
+        <Link
+          to="/login"
+          className="text-xs font-semibold text-slate-600 hover:text-brand-600 hover:underline"
+        >
+          Return to Sign In
+        </Link>
+      }
+    >
       <ResetPasswordForm />
-    </div>
+    </AuthCard>
   );
 };

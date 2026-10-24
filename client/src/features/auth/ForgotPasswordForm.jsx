@@ -35,17 +35,17 @@ export const ForgotPasswordForm = () => {
 
   if (isSubmitted) {
     return (
-      <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6 text-center space-y-4">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-brand-600">
-          <CheckCircle2 className="h-6 w-6" />
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5 text-center space-y-3">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600">
+          <CheckCircle2 className="h-5 w-5" />
         </div>
-        <h3 className="text-base font-semibold text-slate-900">Check Your Inbox</h3>
-        <p className="text-xs text-slate-600 leading-relaxed max-w-sm mx-auto">
-          If an account exists for <span className="font-semibold text-slate-800">{email}</span>, you will receive an email containing a link to reset your password.
+        <h3 className="text-sm font-bold text-slate-900">Recovery Email Sent</h3>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          If an account exists for <span className="font-semibold text-slate-900">{email}</span>, you will receive a secure recovery link.
         </p>
         <div className="pt-2">
           <Link to="/login">
-            <Button variant="outline" size="sm" leftIcon={ArrowLeft}>
+            <Button variant="outline" size="sm" leftIcon={ArrowLeft} className="w-full">
               Back to Sign In
             </Button>
           </Link>
@@ -55,7 +55,7 @@ export const ForgotPasswordForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <Alert type="error" title="Request Failed">
           {error}
@@ -64,7 +64,7 @@ export const ForgotPasswordForm = () => {
 
       <div>
         <Input
-          label="Email Address"
+          label="Account Email Address"
           id="forgot-email"
           type="email"
           placeholder="name@company.com"
@@ -75,30 +75,22 @@ export const ForgotPasswordForm = () => {
             setEmail(e.target.value);
             if (error) setError(null);
           }}
-          helperText="We'll send you a secure link to reset your password."
+          helperText="We'll send a password reset link to this address."
           required
         />
       </div>
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="lg"
-        className="w-full"
-        isLoading={isLoading}
-        leftIcon={Send}
-      >
-        Send Reset Link
-      </Button>
-
-      <div className="text-center pt-2">
-        <Link
-          to="/login"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-brand-600 hover:underline"
+      <div className="pt-1">
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full h-11"
+          isLoading={isLoading}
+          leftIcon={Send}
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Sign In</span>
-        </Link>
+          Send Recovery Link
+        </Button>
       </div>
     </form>
   );

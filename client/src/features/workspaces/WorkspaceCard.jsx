@@ -1,5 +1,6 @@
 import React from 'react';
-import { FolderKanban, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FolderKanban, Calendar, ArrowRight } from 'lucide-react';
 import { Badge } from '../../components/Badge.jsx';
 
 export const WorkspaceCard = ({ workspace }) => {
@@ -12,7 +13,10 @@ export const WorkspaceCard = ({ workspace }) => {
     : 'Recently';
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md">
+    <Link
+      to={`/workspaces/${workspace.id}`}
+      className="group relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+    >
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -30,6 +34,12 @@ export const WorkspaceCard = ({ workspace }) => {
             {workspace.role ? workspace.role.toUpperCase() : 'MEMBER'}
           </Badge>
         </div>
+
+        {workspace.description && (
+          <p className="mt-3 text-xs text-slate-500 line-clamp-2 leading-relaxed">
+            {workspace.description}
+          </p>
+        )}
       </div>
 
       <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500">
@@ -38,10 +48,10 @@ export const WorkspaceCard = ({ workspace }) => {
           <span>Created {formattedDate}</span>
         </div>
         <div className="flex items-center gap-1 text-brand-600 font-medium group-hover:translate-x-0.5 transition-transform">
-          <span>Active</span>
+          <span>Open</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
