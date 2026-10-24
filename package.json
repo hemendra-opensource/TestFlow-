@@ -1,0 +1,28 @@
+{
+  "name": "teamflow-monorepo",
+  "version": "1.0.0",
+  "description": "TeamFlow - Real-Time Project Management System (Phase 1: Foundation & Authentication)",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "dev": "npm run dev:server",
+    "test:server": "npm run test --workspace=server",
+    "test:client": "npm run test --workspace=client",
+    "test": "npm run test:server && npm run test:client",
+    "build:client": "npm run build --workspace=client"
+  },
+  "keywords": [
+    "teamflow",
+    "react",
+    "express",
+    "supabase",
+    "authentication"
+  ],
+  "author": "",
+  "license": "MIT"
+}
