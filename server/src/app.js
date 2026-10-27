@@ -18,8 +18,13 @@ export const createApp = () => {
   const app = express();
 
   // CORS Configuration
+  const configuredClients = (config.clientUrl || '')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+
   const allowedOrigins = [
-    config.clientUrl,
+    ...configuredClients,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
@@ -29,10 +34,25 @@ export const createApp = () => {
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps, curl, or Postman)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) return callback(null, true);
+
+        // Explicit matches
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+
+        // Automatically permit all Vercel preview and production deployments (*.vercel.app)
+        try {
+          const hostname = new URL(origin).hostname;
+          if (hostname.endsWith('.vercel.app')) {
+            return callback(null, true);
+          }
+        } catch (_) {}
+
+        // Non-production fallback
+        if (config.nodeEnv !== 'production') {
           return callback(null, true);
         }
-        return callback(null, true); // Permissive in dev, or origin check
+
+        return callback(new Error(`CORS blocked for origin: ${origin}`));
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -43,6 +63,27 @@ export const createApp = () => {
   // Payload limits
   app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+  // Root health endpoints for hosting providers (e.g., Render, Railway, Uptime monitors)
+  app.get('/', (req, res) => {
+    return res.status(200).json({
+      success: true,
+      service: 'teamflow-api',
+      status: 'healthy',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.get('/health', (req, res) => {
+    return res.status(200).json({
+      success: true,
+      service: 'teamflow-api',
+      status: 'healthy',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    });
+  });
 
   // API v1 Router
   const apiV1Router = express.Router();
