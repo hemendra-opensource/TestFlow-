@@ -5,7 +5,12 @@ import authRoutes from './modules/auth/auth.routes.js';
 import workspacesRoutes from './modules/workspaces/workspaces.routes.js';
 import { projectsRouter, workspaceProjectsRouter } from './modules/projects/projects.routes.js';
 import { tasksRouter, projectTasksRouter } from './modules/tasks/tasks.routes.js';
+import { commentsRouter, taskCommentsRouter } from './modules/comments/comments.routes.js';
+import notificationsRouter from './modules/notifications/notifications.routes.js';
+import { workspaceActivityRouter } from './modules/activity/activity.routes.js';
 import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
+import analyticsRoutes from './modules/analytics/analytics.routes.js';
+import reportsRoutes from './modules/reports/reports.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { successResponse, errorResponse } from './utils/response.js';
 
@@ -60,11 +65,17 @@ export const createApp = () => {
   // Mount modules
   apiV1Router.use('/auth', authRoutes);
   apiV1Router.use('/workspaces/:workspaceId/projects', workspaceProjectsRouter);
+  apiV1Router.use('/workspaces/:workspaceId/activity', workspaceActivityRouter);
   apiV1Router.use('/projects/:projectId/tasks', projectTasksRouter);
+  apiV1Router.use('/tasks/:taskId/comments', taskCommentsRouter);
+  apiV1Router.use('/comments', commentsRouter);
+  apiV1Router.use('/notifications', notificationsRouter);
   apiV1Router.use('/workspaces', workspacesRoutes);
   apiV1Router.use('/projects', projectsRouter);
   apiV1Router.use('/tasks', tasksRouter);
   apiV1Router.use('/dashboard', dashboardRoutes);
+  apiV1Router.use('/analytics', analyticsRoutes);
+  apiV1Router.use('/reports', reportsRoutes);
 
   // Attach API prefixes: support both /api/v1 and /api
   app.use('/api/v1', apiV1Router);

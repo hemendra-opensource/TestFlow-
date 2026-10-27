@@ -10,16 +10,23 @@ import {
   X,
   AlertTriangle,
   ChevronDown,
+  BarChart3,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../features/auth/useAuth.js';
 import { Button } from '../components/Button.jsx';
 import { Alert } from '../components/Alert.jsx';
+import { NotificationCenter } from '../features/notifications/NotificationCenter.jsx';
+import { useNotificationRealtime } from '../features/notifications/useNotificationRealtime.js';
 import { cn } from '../lib/utils.js';
 
 export const AppLayout = () => {
   const { user, profile, logout, isEmailUnconfirmed } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Keep single active real-time notification listener for the authenticated user session
+  useNotificationRealtime(user?.id);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -31,6 +38,8 @@ export const AppLayout = () => {
 
   const navLinks = [
     { label: 'Workspaces', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { label: 'Reports', path: '/reports', icon: FileSpreadsheet },
     { label: 'New Workspace', path: '/workspaces/new', icon: FolderPlus },
     { label: 'Profile', path: '/settings/profile', icon: User },
   ];
@@ -82,6 +91,7 @@ export const AppLayout = () => {
 
             {/* User Profile & Actions */}
             <div className="hidden md:flex items-center gap-4">
+              <NotificationCenter />
               <Link to="/workspaces/new">
                 <Button size="sm" variant="primary" leftIcon={FolderPlus}>
                   New Workspace
@@ -135,6 +145,20 @@ export const AppLayout = () => {
                       <LayoutDashboard className="w-4 h-4 text-slate-400" />
                       All Workspaces
                     </Link>
+                    <Link
+                      to="/analytics"
+                      className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <BarChart3 className="w-4 h-4 text-slate-400" />
+                      Analytics Dashboard
+                    </Link>
+                    <Link
+                      to="/reports"
+                      className="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-slate-400" />
+                      Reports & Export
+                    </Link>
                     <div className="border-t border-slate-100 mt-1 pt-1">
                       <button
                         type="button"
@@ -152,6 +176,7 @@ export const AppLayout = () => {
 
             {/* Mobile menu trigger */}
             <div className="flex md:hidden items-center gap-2">
+              <NotificationCenter />
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
@@ -218,7 +243,7 @@ export const AppLayout = () => {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500">
-          TeamFlow &bull; Phase 1: Foundation & Authentication &bull; Built with React, Node.js & Supabase
+          TeamFlow &bull; Phase 5: Analytics, Reports & Workload Dashboard &bull; Built with React, Node.js & Supabase
         </div>
       </footer>
     </div>

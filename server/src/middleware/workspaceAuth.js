@@ -210,3 +210,115 @@ export const requireTaskDeletePermission = (req, res, next) => {
 
   next();
 };
+
+/**
+ * Middleware: loads comment, its task, parent project, and caller's workspace membership.
+ * Attaches req.comment, req.task, req.project, and req.workspaceMembership.
+ */
+export const requireCommentMember = async (req, res, next) => {
+  try {
+    const { commentId } = req.params;
+
+    if (!commentId || !/^[0-9a-f-]{36}$/i.test(commentId)) {
+      return next(new AppError('Invalid comment ID format', 400));
+    }
+
+    const { data: comment, error: commentError } = await req.scopedSupabase
+      .from('task_comments')
+      .select('*')
+      .eq('id', commentId)
+      .maybeSingle();
+
+    if (commentError) {
+      logger.error('Failed to check comment access', commentError);
+      return next(new AppError('Failed to verify comment access', 500));
+    }
+
+    if (!comment) {
+      return next(new AppError('Comment not found or access denied', 404));
+    }
+
+    const { data: task, error: taskError } = await req.scopedSupabase
+      .from('tasks')
+      .select('*')
+      .eq('id', comment.task_id)
+      .maybeSingle();
+
+    if (taskError || !task) {
+      return next(new AppError('Comment not found or access denied', 404));
+    }
+
+    const { data: project, error: projError } = await req.scopedSupabase
+      .from('projects')
+      .select('*')
+      .eq('id', task.project_id)
+      .maybeSingle();
+
+    if (projError || !project) {
+      return next(new AppError('Comment not found or access denied', 404));
+    }
+
+    const { data: membership, error: memError } = await req.scopedSupabase
+      .from('workspace_members')
+      .select('role, workspace_id, user_id, joined_at')
+      .eq('workspace_id', project.workspace_id)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (memError || !membership) {
+      return next(new AppError('Comment not found or access denied', 404));
+    }
+
+    req.comment = comment;
+    req.task = task;
+    req.project = project;
+    req.workspaceMembership = membership;
+    next();
+  } catch (err) {
+    logger.error('Unexpected error in comment member check', err);
+    next(err);
+  }
+};
+
+/**
+ * Middleware: ensures caller is the author of the comment (for edits).
+ */
+export const requireCommentAuthor = (req, res, next) => {
+  const comment = req.comment;
+  if (!comment) {
+    return next(new AppError('Comment not loaded', 500));
+  }
+
+  if (comment.author_id !== req.user.id) {
+    return next(new AppError('You can only edit your own comments', 403));
+  }
+
+  next();
+};
+
+/**
+ * Middleware: ensures caller has permission to delete a comment.
+ * Permitted if: author of the comment OR workspace owner/admin.
+ */
+export const requireCommentDeletePermission = (req, res, next) => {
+  const comment = req.comment;
+  const membership = req.workspaceMembership;
+
+  if (!comment || !membership) {
+    return next(new AppError('Comment or workspace membership not loaded', 500));
+  }
+
+  const isOwnerOrAdmin = ['owner', 'admin'].includes(membership.role);
+  const isAuthor = comment.author_id === req.user.id;
+
+  if (!isOwnerOrAdmin && !isAuthor) {
+    return next(
+      new AppError(
+        'Insufficient permissions to delete this comment. Requires owner/admin or comment author.',
+        403
+      )
+    );
+  }
+
+  next();
+};

@@ -15,12 +15,16 @@ import { NewWorkspacePage } from '../pages/NewWorkspacePage.jsx';
 import { ProfilePage } from '../pages/ProfilePage.jsx';
 import { WorkspaceDetailPage } from '../pages/WorkspaceDetailPage.jsx';
 import { ProjectDetailPage } from '../pages/ProjectDetailPage.jsx';
+import { AnalyticsPage } from '../pages/AnalyticsPage.jsx';
+import { ReportsPage } from '../pages/ReportsPage.jsx';
 import { NotFoundPage } from '../pages/NotFoundPage.jsx';
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary.jsx';
 
 export const router = createBrowserRouter([
   // Public Routes (Redirect to /dashboard if logged in)
   {
     element: <PublicRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AuthLayout />,
@@ -37,6 +41,7 @@ export const router = createBrowserRouter([
   // Protected Routes (Redirect to /login if unauthenticated)
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AppLayout />,
@@ -45,7 +50,10 @@ export const router = createBrowserRouter([
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/workspaces/new', element: <NewWorkspacePage /> },
           { path: '/workspaces/:id', element: <WorkspaceDetailPage /> },
+          { path: '/workspaces/:workspaceId', element: <WorkspaceDetailPage /> },
           { path: '/projects/:projectId', element: <ProjectDetailPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
+          { path: '/reports', element: <ReportsPage /> },
           { path: '/settings/profile', element: <ProfilePage /> },
         ],
       },

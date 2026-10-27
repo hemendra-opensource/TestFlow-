@@ -66,3 +66,11 @@ export const updateWorkspaceSchema = z
     (data) => Object.keys(data).length > 0,
     { message: 'At least one field (name, slug, or description) must be provided' }
   );
+
+export const addMemberSchema = z.object({
+  email: z
+    .string({ required_error: 'Email is required' })
+    .trim()
+    .email('Please provide a valid email address'),
+  role: z.enum(['admin', 'member', 'viewer']).default('member'),
+});

@@ -1,13 +1,16 @@
 /**
  * Consistent JSON response helper for successful operations
  */
-export const successResponse = (res, data = null, statusCode = 200, message = null) => {
+export const successResponse = (res, data = null, statusCode = 200, message = null, meta = null) => {
   const payload = {
     success: true,
     data,
   };
   if (message) {
     payload.message = message;
+  }
+  if (meta && typeof meta === 'object') {
+    Object.assign(payload, meta);
   }
   return res.status(statusCode).json(payload);
 };

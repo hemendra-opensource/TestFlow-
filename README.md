@@ -149,7 +149,7 @@ cd ..
 #### Backend (`server/.env`):
 Create `server/.env` based on `server/.env.example`:
 ```bash
-PORT=5000
+PORT=8000
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 SUPABASE_URL=https://your-project.supabase.co
@@ -161,7 +161,7 @@ Create `client/.env` based on `client/.env.example`:
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-anon-key
-VITE_API_URL=http://localhost:5000/api/v1
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 ---
@@ -173,7 +173,7 @@ VITE_API_URL=http://localhost:5000/api/v1
 To start the backend API server:
 ```bash
 npm run dev:server
-# Server runs on http://localhost:5000
+# Server runs on http://localhost:8000
 ```
 
 To start the frontend Vite development server:

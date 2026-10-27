@@ -17,11 +17,20 @@ import {
   ChevronRight,
   Calendar,
   FolderKanban,
+  Plus,
+  UserPlus,
 } from 'lucide-react';
-import { useWorkspace, useWorkspaceMembers, useUpdateWorkspace } from '../features/workspaces/useWorkspaces.js';
+import { AddMemberModal } from '../features/workspaces/AddMemberModal.jsx';
+import {
+  useWorkspace,
+  useWorkspaceMembers,
+  useUpdateWorkspace,
+  useWorkspaceRealtime,
+} from '../features/workspaces/useWorkspaces.js';
 import { useProjects, useCreateProject } from '../features/projects/useProjects.js';
 import { ProjectCard } from '../features/projects/ProjectCard.jsx';
 import { ProjectModal } from '../features/projects/ProjectModal.jsx';
+import { ActivityFeed } from '../features/activity/ActivityFeed.jsx';
 import { Button } from '../components/Button.jsx';
 import { Input } from '../components/Input.jsx';
 import { Alert } from '../components/Alert.jsx';
@@ -224,9 +233,13 @@ const WorkspaceSettingsPanel = ({ workspace, onClose }) => {
 
 // ── Main WorkspaceDetailPage ──────────────────────────────
 export const WorkspaceDetailPage = () => {
-  const { workspaceId } = useParams();
+  const params = useParams();
+  const workspaceId = params.workspaceId || params.id;
   const { user } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
+
+  // Subscribe to real-time workspace updates (projects, members, activity)
+  useWorkspaceRealtime(workspaceId);
 
   const { data: workspace, isLoading: wsLoading, error: wsError } = useWorkspace(workspaceId);
   const { data: members, isLoading: membersLoading, error: membersError } = useWorkspaceMembers(workspaceId);
@@ -234,6 +247,7 @@ export const WorkspaceDetailPage = () => {
   const createProjectMutation = useCreateProject(workspaceId);
 
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const isAdmin = workspace?.role === 'admin' || workspace?.role === 'owner';
 
   // ── Loading state ──
@@ -429,9 +443,21 @@ export const WorkspaceDetailPage = () => {
             )}
           </div>
 
-          <div className="text-xs text-slate-400 italic">
-            {!isAdmin && 'Contact an admin to manage members'}
-            {isAdmin && 'Invitation flow available in Phase 3'}
+          <div>
+            {isAdmin ? (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={UserPlus}
+                onClick={() => setIsAddMemberOpen(true)}
+              >
+                Add Member
+              </Button>
+            ) : (
+              <span className="text-xs text-slate-400 italic">
+                Contact an admin to manage members
+              </span>
+            )}
           </div>
         </div>
 
@@ -462,6 +488,17 @@ export const WorkspaceDetailPage = () => {
           ))}
         </div>
       </div>
+
+      {/* Add Member Modal */}
+      <AddMemberModal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        workspaceId={workspace.id}
+        existingMembers={members || []}
+      />
+
+      {/* ── Activity History Feed ── */}
+      <ActivityFeed workspaceId={workspace.id} />
 
       {/* ── Back link ── */}
       <Link

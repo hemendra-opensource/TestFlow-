@@ -65,4 +65,27 @@ export const workspacesController = {
       next(err);
     }
   },
+
+  addWorkspaceMember: async (req, res, next) => {
+    try {
+      const member = await workspacesService.addWorkspaceMember(
+        req.params.workspaceId,
+        req.body,
+        req.user,
+        req.scopedSupabase
+      );
+      return successResponse(res, member, 201, 'Member added successfully');
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  getRegisteredUsers: async (req, res, next) => {
+    try {
+      const users = await workspacesService.getRegisteredUsers();
+      return successResponse(res, users, 200);
+    } catch (err) {
+      next(err);
+    }
+  },
 };

@@ -1,6 +1,6 @@
 import { supabase } from './supabase.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export class ApiError extends Error {
   constructor(message, status = 500, details = null) {
@@ -38,9 +38,9 @@ export async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
-    const result = await response.json().catch(() => null);
 
     if (!response.ok) {
+      const result = await response.json().catch(() => null);
       // If 401 Unauthorized, dispatch auth expired event
       if (response.status === 401) {
         window.dispatchEvent(new CustomEvent('teamflow:auth-expired'));
@@ -52,6 +52,19 @@ export async function apiRequest(endpoint, options = {}) {
         `Request failed with status ${response.status}`;
 
       throw new ApiError(errorMessage, response.status, result?.error?.details);
+    }
+
+    if (options.responseType === 'blob') {
+      return await response.blob();
+    }
+    if (options.responseType === 'text') {
+      return await response.text();
+    }
+
+    const result = await response.json().catch(() => null);
+
+    if (options.rawResponse) {
+      return result;
     }
 
     return result?.data !== undefined ? result.data : result;

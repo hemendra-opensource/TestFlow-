@@ -1,5 +1,9 @@
 import { createApp } from '../../src/app.js';
-import { setSupabaseClientForTesting, setScopedClientFactoryForTesting } from '../../src/config/supabase.js';
+import {
+  setSupabaseClientForTesting,
+  setScopedClientFactoryForTesting,
+  setAdminClientForTesting,
+} from '../../src/config/supabase.js';
 
 export const TEST_USERS = {
   alice: {
@@ -55,6 +59,14 @@ export const PROJECT_IDS = {
 
 export const TASK_IDS = {
   aliceTask: '33333333-2222-4000-a000-000000000001',
+};
+
+export const COMMENT_IDS = {
+  aliceComment: '55555555-2222-4000-a000-000000000001',
+};
+
+export const NOTIFICATION_IDS = {
+  carolNotification: '66666666-2222-4000-a000-000000000001',
 };
 
 /**
@@ -150,11 +162,52 @@ export const createMockSupabaseEnvironment = () => {
         updated_at: new Date().toISOString(),
       },
     ],
+    task_comments: [
+      {
+        id: COMMENT_IDS.aliceComment,
+        task_id: TASK_IDS.aliceTask,
+        author_id: TEST_USERS.alice.id,
+        content: 'First setup comment by Alice',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 3600000).toISOString(),
+        edited_at: null,
+      },
+    ],
+    notifications: [
+      {
+        id: NOTIFICATION_IDS.carolNotification,
+        recipient_id: TEST_USERS.carol.id,
+        workspace_id: WORKSPACE_IDS.alice,
+        actor_id: TEST_USERS.alice.id,
+        type: 'task_assigned',
+        title: 'Task assigned',
+        message: 'You were assigned to Setup Infrastructure',
+        entity_type: 'task',
+        entity_id: TASK_IDS.aliceTask,
+        is_read: false,
+        created_at: new Date(Date.now() - 1800000).toISOString(),
+        read_at: null,
+      },
+    ],
+    activity_logs: [
+      {
+        id: '77777777-2222-4000-a000-000000000001',
+        workspace_id: WORKSPACE_IDS.alice,
+        actor_id: TEST_USERS.alice.id,
+        entity_type: 'task',
+        entity_id: TASK_IDS.aliceTask,
+        action: 'created',
+        metadata: { task_title: 'Setup Infrastructure' },
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+      },
+    ],
   };
 
   db.WORKSPACE_IDS = WORKSPACE_IDS;
   db.PROJECT_IDS = PROJECT_IDS;
   db.TASK_IDS = TASK_IDS;
+  db.COMMENT_IDS = COMMENT_IDS;
+  db.NOTIFICATION_IDS = NOTIFICATION_IDS;
 
   const getUserForToken = (token) => {
     if (token === VALID_TOKENS.alice) return TEST_USERS.alice;
@@ -169,35 +222,59 @@ export const createMockSupabaseEnvironment = () => {
       (m) => m.workspace_id === workspaceId && m.user_id === userId
     ) || null;
 
+  const canAccessWorkspace = (wsId, userId) =>
+    Boolean(userId && getMembership(wsId, userId));
+
+  const canAccessProject = (projId, userId) => {
+    const proj = db.projects.find((p) => p.id === projId);
+    if (!proj) return false;
+    return canAccessWorkspace(proj.workspace_id, userId);
+  };
+
+  const canAccessTask = (taskId, userId) => {
+    const task = db.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+    return canAccessProject(task.project_id, userId);
+  };
+
+  const attachRelationsToTask = (t) => {
+    const assignee = t.assignee_id ? db.profiles.find((p) => p.id === t.assignee_id) : null;
+    const creator = t.created_by ? db.profiles.find((p) => p.id === t.created_by) : null;
+    const project = db.projects.find((p) => p.id === t.project_id);
+    return {
+      ...t,
+      assignee: assignee ? { id: assignee.id, full_name: assignee.full_name, avatar_url: assignee.avatar_url } : null,
+      creator: creator ? { id: creator.id, full_name: creator.full_name, avatar_url: creator.avatar_url } : null,
+      project: project ? { id: project.id, name: project.name, workspace_id: project.workspace_id } : null,
+    };
+  };
+
+  const attachRelationsToComment = (c) => {
+    const author = db.profiles.find((p) => p.id === c.author_id);
+    return {
+      ...c,
+      author: author ? { id: author.id, full_name: author.full_name, avatar_url: author.avatar_url } : null,
+    };
+  };
+
+  const attachRelationsToNotification = (n) => {
+    const actor = n.actor_id ? db.profiles.find((p) => p.id === n.actor_id) : null;
+    return {
+      ...n,
+      actor: actor ? { id: actor.id, full_name: actor.full_name, avatar_url: actor.avatar_url } : null,
+    };
+  };
+
+  const attachRelationsToActivity = (a) => {
+    const actor = a.actor_id ? db.profiles.find((p) => p.id === a.actor_id) : null;
+    return {
+      ...a,
+      actor: actor ? { id: actor.id, full_name: actor.full_name, avatar_url: actor.avatar_url } : null,
+    };
+  };
+
   const getClientForToken = (token) => {
     const currentUser = getUserForToken(token);
-
-    const canAccessWorkspace = (wsId) =>
-      Boolean(currentUser && getMembership(wsId, currentUser.id));
-
-    const canAccessProject = (projId) => {
-      const proj = db.projects.find((p) => p.id === projId);
-      if (!proj) return false;
-      return canAccessWorkspace(proj.workspace_id);
-    };
-
-    const canAccessTask = (taskId) => {
-      const task = db.tasks.find((t) => t.id === taskId);
-      if (!task) return false;
-      return canAccessProject(task.project_id);
-    };
-
-    const attachRelationsToTask = (t) => {
-      const assignee = t.assignee_id ? db.profiles.find((p) => p.id === t.assignee_id) : null;
-      const creator = t.created_by ? db.profiles.find((p) => p.id === t.created_by) : null;
-      const project = db.projects.find((p) => p.id === t.project_id);
-      return {
-        ...t,
-        assignee: assignee ? { id: assignee.id, full_name: assignee.full_name, avatar_url: assignee.avatar_url } : null,
-        creator: creator ? { id: creator.id, full_name: creator.full_name, avatar_url: creator.avatar_url } : null,
-        project: project ? { id: project.id, name: project.name, workspace_id: project.workspace_id } : null,
-      };
-    };
 
     return {
       auth: {
@@ -211,69 +288,87 @@ export const createMockSupabaseEnvironment = () => {
       from: (table) => {
         let _fields = '*';
         let _filters = {};
+        let _gteFilters = {};
+        let _lteFilters = {};
+        let _inFilters = {};
+        let _slice = null;
 
         const executeSelect = () => {
           if (!currentUser) return [];
 
+          const applyCommonFilters = (item) => {
+            for (const [k, v] of Object.entries(_filters)) {
+              if (item[k] !== v) return false;
+            }
+            for (const [k, v] of Object.entries(_inFilters)) {
+              if (Array.isArray(v) && !v.includes(item[k])) return false;
+            }
+            for (const [k, v] of Object.entries(_gteFilters)) {
+              if (item[k] < v) return false;
+            }
+            for (const [k, v] of Object.entries(_lteFilters)) {
+              if (item[k] > v) return false;
+            }
+            return true;
+          };
+
           if (table === 'profiles') {
-            return db.profiles
-              .filter((p) => {
-                // RLS: user can only see their own profile
-                if (p.id !== currentUser.id) return false;
-                for (const [k, v] of Object.entries(_filters)) {
-                  if (p[k] !== v) return false;
-                }
-                return true;
-              });
+            return db.profiles.filter((p) => {
+              if (Object.keys(_inFilters).length > 0 || _filters.id) {
+                return applyCommonFilters(p);
+              }
+              if (p.id !== currentUser.id) return false;
+              return applyCommonFilters(p);
+            });
           }
 
           if (table === 'projects') {
             return db.projects
-              .filter((p) => canAccessWorkspace(p.workspace_id))
-              .filter((p) => {
-                for (const [k, v] of Object.entries(_filters)) {
-                  if (p[k] !== v) return false;
-                }
-                return true;
-              });
+              .filter((p) => canAccessWorkspace(p.workspace_id, currentUser.id))
+              .filter(applyCommonFilters);
           }
 
           if (table === 'tasks') {
             return db.tasks
-              .filter((t) => canAccessTask(t.id))
-              .filter((t) => {
-                for (const [k, v] of Object.entries(_filters)) {
-                  if (t[k] !== v) return false;
-                }
-                return true;
-              })
+              .filter((t) => canAccessTask(t.id, currentUser.id))
+              .filter(applyCommonFilters)
               .map(attachRelationsToTask);
+          }
+
+          if (table === 'task_comments') {
+            return db.task_comments
+              .filter((c) => canAccessTask(c.task_id, currentUser.id))
+              .filter(applyCommonFilters)
+              .map(attachRelationsToComment);
+          }
+
+          if (table === 'notifications') {
+            return db.notifications
+              .filter((n) => n.recipient_id === currentUser.id)
+              .filter(applyCommonFilters)
+              .map(attachRelationsToNotification);
+          }
+
+          if (table === 'activity_logs') {
+            return db.activity_logs
+              .filter((a) => canAccessWorkspace(a.workspace_id, currentUser.id))
+              .filter(applyCommonFilters)
+              .map(attachRelationsToActivity);
           }
 
           if (table === 'workspaces') {
             return db.workspaces
-              .filter((w) => canAccessWorkspace(w.id))
-              .filter((w) => {
-                for (const [k, v] of Object.entries(_filters)) {
-                  if (w[k] !== v) return false;
-                }
-                return true;
-              });
+              .filter((w) => canAccessWorkspace(w.id, currentUser.id))
+              .filter(applyCommonFilters);
           }
 
           if (table === 'workspace_members') {
-            // Check workspace access
             const wsId = _filters['workspace_id'];
-            if (wsId && !canAccessWorkspace(wsId)) {
+            if (wsId && !canAccessWorkspace(wsId, currentUser.id)) {
               return [];
             }
 
-            const members = db.workspace_members.filter((m) => {
-              for (const [k, v] of Object.entries(_filters)) {
-                if (m[k] !== v) return false;
-              }
-              return true;
-            });
+            const members = db.workspace_members.filter(applyCommonFilters);
 
             if (_fields && _fields.includes('workspace:')) {
               return members.map((m) => ({
@@ -299,15 +394,18 @@ export const createMockSupabaseEnvironment = () => {
             return members;
           }
 
-          return db[table] || [];
+          return (db[table] || []).filter(applyCommonFilters);
         };
 
         const createQueryObject = () => {
           const queryObj = {
             then: (resolve, reject) => {
               try {
-                const results = executeSelect();
-                resolve({ data: results, error: null });
+                let results = executeSelect();
+                if (_slice) {
+                  results = results.slice(_slice.from, _slice.to + 1);
+                }
+                resolve({ data: results, count: results.length, error: null });
               } catch (err) {
                 reject(err);
               }
@@ -316,19 +414,35 @@ export const createMockSupabaseEnvironment = () => {
               _filters[col] = val;
               return createQueryObject();
             },
+            in: (col, vals) => {
+              _inFilters[col] = vals;
+              return createQueryObject();
+            },
+            gte: (col, val) => {
+              _gteFilters[col] = val;
+              return createQueryObject();
+            },
+            lte: (col, val) => {
+              _lteFilters[col] = val;
+              return createQueryObject();
+            },
+            range: (from, to) => {
+              _slice = { from, to };
+              return createQueryObject();
+            },
             order: (col, opts = {}) => {
               const obj = createQueryObject();
               const origThen = obj.then;
               obj.then = (resolve, reject) => {
                 origThen(({ data, error }) => {
-                  if (error || !Array.isArray(data)) return resolve({ data, error });
+                  if (error || !Array.isArray(data)) return resolve({ data, count: 0, error });
                   const sorted = [...data].sort((a, b) => {
                     const valA = a[col] ?? '';
                     const valB = b[col] ?? '';
                     if (opts.ascending === false) return valA < valB ? 1 : -1;
                     return valA > valB ? 1 : -1;
                   });
-                  resolve({ data: sorted, error: null });
+                  resolve({ data: sorted, count: sorted.length, error: null });
                 }, reject);
               };
               return obj;
@@ -338,8 +452,9 @@ export const createMockSupabaseEnvironment = () => {
               const origThen = obj.then;
               obj.then = (resolve, reject) => {
                 origThen(({ data, error }) => {
-                  if (error || !Array.isArray(data)) return resolve({ data, error });
-                  resolve({ data: data.slice(0, num), error: null });
+                  if (error || !Array.isArray(data)) return resolve({ data, count: 0, error });
+                  const sliced = data.slice(0, num);
+                  resolve({ data: sliced, count: sliced.length, error: null });
                 }, reject);
               };
               return obj;
@@ -365,7 +480,9 @@ export const createMockSupabaseEnvironment = () => {
 
           insert: (payload) => {
             const row = Array.isArray(payload) ? payload[0] : payload;
-            const newId = row.id || `${table.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const newId =
+              row.id ||
+              `${table.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
             const createdRow = {
               ...row,
               id: newId,
@@ -377,12 +494,21 @@ export const createMockSupabaseEnvironment = () => {
             if (table === 'tasks') db.tasks.push(createdRow);
             if (table === 'workspaces') db.workspaces.push(createdRow);
             if (table === 'workspace_members') db.workspace_members.push(createdRow);
+            if (table === 'task_comments') db.task_comments.push(createdRow);
+            if (table === 'notifications') db.notifications.push(createdRow);
+            if (table === 'activity_logs') db.activity_logs.push(createdRow);
 
             return {
               select: () => ({
                 single: async () => {
                   if (table === 'tasks') {
                     return { data: attachRelationsToTask(createdRow), error: null };
+                  }
+                  if (table === 'task_comments') {
+                    return { data: attachRelationsToComment(createdRow), error: null };
+                  }
+                  if (table === 'notifications') {
+                    return { data: attachRelationsToNotification(createdRow), error: null };
                   }
                   return { data: createdRow, error: null };
                 },
@@ -391,50 +517,113 @@ export const createMockSupabaseEnvironment = () => {
           },
 
           update: (payload) => {
-            return {
+            const updateFilters = {};
+
+            const createUpdateQuery = () => ({
               eq: (col, val) => {
-                return {
-                  select: () => ({
-                    single: async () => {
-                      if (table === 'workspaces') {
-                        // Slug uniqueness check
-                        if (payload.slug) {
-                          const slugExists = db.workspaces.some(
-                            (w) => w.slug === payload.slug && w.id !== val
-                          );
-                          if (slugExists) {
-                            return { data: null, error: { code: '23505', message: 'duplicate key' } };
-                          }
+                updateFilters[col] = val;
+                return createUpdateQuery();
+              },
+              select: (fields) => ({
+                maybeSingle: async () => {
+                  if (table === 'workspaces' && payload.slug) {
+                    const slugExists = db.workspaces.some(
+                      (w) => w.slug === payload.slug && w.id !== updateFilters.id
+                    );
+                    if (slugExists) {
+                      return { data: null, error: { code: '23505', message: 'duplicate key' } };
+                    }
+                  }
+                  const idx = db[table]?.findIndex((item) => {
+                    for (const [k, v] of Object.entries(updateFilters)) {
+                      if (item[k] !== v) return false;
+                    }
+                    return true;
+                  });
+                  if (idx === -1 || idx === undefined) return { data: null, error: null };
+                  db[table][idx] = {
+                    ...db[table][idx],
+                    ...payload,
+                    updated_at: new Date().toISOString(),
+                  };
+                  const updated = db[table][idx];
+                  if (table === 'tasks') return { data: attachRelationsToTask(updated), error: null };
+                  if (table === 'task_comments') return { data: attachRelationsToComment(updated), error: null };
+                  if (table === 'notifications') return { data: attachRelationsToNotification(updated), error: null };
+                  return { data: updated, error: null };
+                },
+                single: async () => {
+                  if (table === 'workspaces' && payload.slug) {
+                    const slugExists = db.workspaces.some(
+                      (w) => w.slug === payload.slug && w.id !== updateFilters.id
+                    );
+                    if (slugExists) {
+                      return { data: null, error: { code: '23505', message: 'duplicate key' } };
+                    }
+                  }
+                  const idx = db[table]?.findIndex((item) => {
+                    for (const [k, v] of Object.entries(updateFilters)) {
+                      if (item[k] !== v) return false;
+                    }
+                    return true;
+                  });
+                  if (idx === -1 || idx === undefined) return { data: null, error: new Error('Not found') };
+                  db[table][idx] = {
+                    ...db[table][idx],
+                    ...payload,
+                    updated_at: new Date().toISOString(),
+                  };
+                  const updated = db[table][idx];
+                  if (table === 'tasks') return { data: attachRelationsToTask(updated), error: null };
+                  if (table === 'task_comments') return { data: attachRelationsToComment(updated), error: null };
+                  if (table === 'notifications') return { data: attachRelationsToNotification(updated), error: null };
+                  return { data: updated, error: null };
+                },
+                then: (resolve) => {
+                  const matched = [];
+                  if (db[table]) {
+                    for (let i = 0; i < db[table].length; i++) {
+                      let match = true;
+                      for (const [k, v] of Object.entries(updateFilters)) {
+                        if (db[table][i][k] !== v) {
+                          match = false;
+                          break;
                         }
                       }
-                      const idx = db[table]?.findIndex((item) => item[col] === val);
-                      if (idx === -1) {
-                        return { data: null, error: new Error('Not found') };
+                      if (match) {
+                        db[table][i] = {
+                          ...db[table][i],
+                          ...payload,
+                          updated_at: new Date().toISOString(),
+                        };
+                        matched.push(db[table][i]);
                       }
-                      db[table][idx] = {
-                        ...db[table][idx],
-                        ...payload,
-                        updated_at: new Date().toISOString(),
-                      };
-                      const updated = db[table][idx];
-                      if (table === 'tasks') {
-                        return { data: attachRelationsToTask(updated), error: null };
-                      }
-                      return { data: updated, error: null };
-                    },
-                  }),
-                };
-              },
-            };
+                    }
+                  }
+                  resolve({ data: matched, error: null });
+                },
+              }),
+            });
+
+            return createUpdateQuery();
           },
 
           delete: () => {
-            return {
+            const delFilters = {};
+            const createDelQuery = () => ({
               eq: (col, val) => {
-                db[table] = db[table]?.filter((item) => item[col] !== val) || [];
+                delFilters[col] = val;
+                db[table] =
+                  db[table]?.filter((item) => {
+                    for (const [k, v] of Object.entries(delFilters)) {
+                      if (item[k] === v) return false;
+                    }
+                    return true;
+                  }) || [];
                 return Promise.resolve({ data: null, error: null });
               },
-            };
+            });
+            return createDelQuery();
           },
         };
       },
@@ -447,7 +636,10 @@ export const createMockSupabaseEnvironment = () => {
           const { p_name, p_slug, p_description } = params;
           const exists = db.workspaces.some((w) => w.slug === p_slug);
           if (exists) {
-            return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
+            return {
+              data: null,
+              error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+            };
           }
           const newWs = {
             id: `ws-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -473,6 +665,85 @@ export const createMockSupabaseEnvironment = () => {
     };
   };
 
+  const getAdminClient = () => {
+    return {
+      from: (table) => {
+        let _filters = {};
+        let _gteFilters = {};
+
+        const executeAdminSelect = () => {
+          let rows = db[table] || [];
+          return rows.filter((r) => {
+            for (const [k, v] of Object.entries(_filters)) {
+              if (r[k] !== v) return false;
+            }
+            for (const [k, v] of Object.entries(_gteFilters)) {
+              if (r[k] < v) return false;
+            }
+            return true;
+          });
+        };
+
+        const createAdminQueryObject = () => ({
+          then: (resolve) => {
+            const rows = executeAdminSelect();
+            resolve({ data: rows, count: rows.length, error: null });
+          },
+          eq: (col, val) => {
+            _filters[col] = val;
+            return createAdminQueryObject();
+          },
+          gte: (col, val) => {
+            _gteFilters[col] = val;
+            return createAdminQueryObject();
+          },
+          limit: (num) => {
+            const obj = createAdminQueryObject();
+            const origThen = obj.then;
+            obj.then = (resolve) => {
+              origThen(({ data }) => {
+                resolve({ data: (data || []).slice(0, num), error: null });
+              });
+            };
+            return obj;
+          },
+          maybeSingle: async () => {
+            const rows = executeAdminSelect();
+            return { data: rows.length > 0 ? rows[0] : null, error: null };
+          },
+          single: async () => {
+            const rows = executeAdminSelect();
+            if (rows.length === 0) return { data: null, error: new Error('Not found') };
+            return { data: rows[0], error: null };
+          },
+        });
+
+        return {
+          select: () => createAdminQueryObject(),
+          insert: (payload) => {
+            const row = Array.isArray(payload) ? payload[0] : payload;
+            const created = {
+              ...row,
+              id:
+                row.id ||
+                `${table.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            if (!db[table]) db[table] = [];
+            db[table].push(created);
+
+            return {
+              select: () => ({
+                single: async () => ({ data: created, error: null }),
+              }),
+            };
+          },
+        };
+      },
+    };
+  };
+
   const defaultMock = {
     auth: {
       getUser: async (tok) => {
@@ -484,13 +755,24 @@ export const createMockSupabaseEnvironment = () => {
     },
   };
 
-  return { db, defaultMock, getClientForToken, WORKSPACE_IDS, PROJECT_IDS, TASK_IDS };
+  return {
+    db,
+    defaultMock,
+    getClientForToken,
+    getAdminClient,
+    WORKSPACE_IDS,
+    PROJECT_IDS,
+    TASK_IDS,
+    COMMENT_IDS,
+    NOTIFICATION_IDS,
+  };
 };
 
 export const setupTestApp = () => {
   const env = createMockSupabaseEnvironment();
   setSupabaseClientForTesting(env.defaultMock);
   setScopedClientFactoryForTesting((tok) => env.getClientForToken(tok));
+  setAdminClientForTesting(env.getAdminClient());
   const app = createApp();
   return { app, env };
 };

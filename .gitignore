@@ -12,7 +12,7 @@ node_modules/
 .env.test
 
 # Build outputs
-dist/
+tests/
 dist-ssr/
 build/
 *.local

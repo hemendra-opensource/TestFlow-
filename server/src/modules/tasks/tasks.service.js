@@ -1,14 +1,39 @@
 import { AppError } from '../../utils/appError.js';
 import { logger } from '../../utils/logger.js';
 
+async function enrichTasksWithProfiles(scopedSupabase, tasks) {
+  const taskList = Array.isArray(tasks) ? tasks : [tasks].filter(Boolean);
+  if (taskList.length === 0) return Array.isArray(tasks) ? [] : null;
+
+  const userIds = Array.from(
+    new Set(taskList.flatMap((t) => [t.assignee_id, t.created_by]).filter(Boolean))
+  );
+
+  let profileMap = new Map();
+  if (userIds.length > 0) {
+    const { data: profiles, error } = await scopedSupabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', userIds);
+
+    if (!error && profiles) {
+      profileMap = new Map(profiles.map((p) => [p.id, p]));
+    }
+  }
+
+  const enriched = taskList.map((t) => ({
+    ...t,
+    assignee: t.assignee_id ? profileMap.get(t.assignee_id) || null : null,
+    creator: t.created_by ? profileMap.get(t.created_by) || null : null,
+  }));
+
+  return Array.isArray(tasks) ? enriched : enriched[0] || null;
+}
+
 export const listTasks = async (scopedSupabase, projectId, filters = {}) => {
   let query = scopedSupabase
     .from('tasks')
-    .select(`
-      *,
-      assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url),
-      creator:profiles!tasks_created_by_fkey(id, full_name, avatar_url)
-    `)
+    .select('*')
     .eq('project_id', projectId);
 
   if (filters.status) {
@@ -40,7 +65,7 @@ export const listTasks = async (scopedSupabase, projectId, filters = {}) => {
     throw new AppError('Failed to fetch tasks', 500);
   }
 
-  let result = tasks || [];
+  let result = await enrichTasksWithProfiles(scopedSupabase, tasks || []);
 
   if (filters.search) {
     const term = filters.search.toLowerCase();
@@ -98,11 +123,7 @@ export const createTask = async (scopedSupabase, projectId, workspaceId, userId,
   const { data: created, error } = await scopedSupabase
     .from('tasks')
     .insert(payload)
-    .select(`
-      *,
-      assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url),
-      creator:profiles!tasks_created_by_fkey(id, full_name, avatar_url)
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -110,17 +131,13 @@ export const createTask = async (scopedSupabase, projectId, workspaceId, userId,
     throw new AppError('Failed to create task', 500);
   }
 
-  return created;
+  return enrichTasksWithProfiles(scopedSupabase, created);
 };
 
 export const getTaskById = async (scopedSupabase, taskId) => {
   const { data: task, error } = await scopedSupabase
     .from('tasks')
-    .select(`
-      *,
-      assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url),
-      creator:profiles!tasks_created_by_fkey(id, full_name, avatar_url)
-    `)
+    .select('*')
     .eq('id', taskId)
     .maybeSingle();
 
@@ -129,7 +146,7 @@ export const getTaskById = async (scopedSupabase, taskId) => {
     throw new AppError('Task not found or access denied', 404);
   }
 
-  return task;
+  return enrichTasksWithProfiles(scopedSupabase, task);
 };
 
 export const updateTask = async (scopedSupabase, taskId, workspaceId, data) => {
@@ -151,11 +168,7 @@ export const updateTask = async (scopedSupabase, taskId, workspaceId, data) => {
     .from('tasks')
     .update(data)
     .eq('id', taskId)
-    .select(`
-      *,
-      assignee:profiles!tasks_assignee_id_fkey(id, full_name, avatar_url),
-      creator:profiles!tasks_created_by_fkey(id, full_name, avatar_url)
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -163,7 +176,7 @@ export const updateTask = async (scopedSupabase, taskId, workspaceId, data) => {
     throw new AppError('Failed to update task', 500);
   }
 
-  return updated;
+  return enrichTasksWithProfiles(scopedSupabase, updated);
 };
 
 export const deleteTask = async (scopedSupabase, taskId) => {

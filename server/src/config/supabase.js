@@ -1,19 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { config } from './env.js';
 
 let defaultClient = null;
 let scopedClientFactory = null;
 
+const clientOptions = {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+  realtime: {
+    transport: ws,
+  },
+};
+
 export const getSupabaseClient = () => {
   if (!defaultClient) {
     const url = config.supabase.url || 'https://placeholder.supabase.co';
     const key = config.supabase.publishableKey || 'placeholder-anon-key';
-    defaultClient = createClient(url, key, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    defaultClient = createClient(url, key, clientOptions);
   }
   return defaultClient;
 };
@@ -36,12 +42,34 @@ export const createScopedClient = (accessToken) => {
       persistSession: false,
       autoRefreshToken: false,
     },
+    realtime: {
+      transport: ws,
+    },
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     },
   });
+};
+
+let adminClient = null;
+
+export const getSupabaseAdminClient = () => {
+  if (!adminClient) {
+    const url = config.supabase.url || 'https://placeholder.supabase.co';
+    const key = config.supabase.secretKey || config.supabase.publishableKey || 'placeholder-anon-key';
+    adminClient = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      realtime: {
+        transport: ws,
+      },
+    });
+  }
+  return adminClient;
 };
 
 // For test dependency injection
@@ -51,4 +79,8 @@ export const setSupabaseClientForTesting = (mockClient) => {
 
 export const setScopedClientFactoryForTesting = (factoryFn) => {
   scopedClientFactory = factoryFn;
+};
+
+export const setAdminClientForTesting = (mockAdmin) => {
+  adminClient = mockAdmin;
 };

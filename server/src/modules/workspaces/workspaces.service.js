@@ -1,5 +1,8 @@
 import { AppError } from '../../utils/appError.js';
 import { logger } from '../../utils/logger.js';
+import { getSupabaseAdminClient } from '../../config/supabase.js';
+import { logActivity } from '../activity/activity.service.js';
+import { createNotification } from '../notifications/notifications.service.js';
 
 export const workspacesService = {
   /**
@@ -87,19 +90,9 @@ export const workspacesService = {
    * Policy: all members can view member list (owners/admins can see full details).
    */
   async getWorkspaceMembers(workspaceId, scopedSupabase) {
-    const { data, error } = await scopedSupabase
+    const { data: members, error } = await scopedSupabase
       .from('workspace_members')
-      .select(`
-        id,
-        role,
-        joined_at,
-        user_id,
-        profile:profiles (
-          id,
-          full_name,
-          avatar_url
-        )
-      `)
+      .select('id, role, joined_at, user_id')
       .eq('workspace_id', workspaceId)
       .order('joined_at', { ascending: true });
 
@@ -108,14 +101,31 @@ export const workspacesService = {
       throw new AppError('Failed to fetch workspace members', 500);
     }
 
-    return (data || []).map((m) => ({
-      id: m.id,
-      user_id: m.user_id,
-      role: m.role,
-      joined_at: m.joined_at,
-      full_name: m.profile?.full_name || null,
-      avatar_url: m.profile?.avatar_url || null,
-    }));
+    const userIds = Array.from(new Set((members || []).map((m) => m.user_id).filter(Boolean)));
+    let profileMap = new Map();
+
+    if (userIds.length > 0) {
+      const { data: profiles, error: profError } = await scopedSupabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (!profError && profiles) {
+        profileMap = new Map(profiles.map((p) => [p.id, p]));
+      }
+    }
+
+    return (members || []).map((m) => {
+      const prof = profileMap.get(m.user_id);
+      return {
+        id: m.id,
+        user_id: m.user_id,
+        role: m.role,
+        joined_at: m.joined_at,
+        full_name: prof?.full_name || null,
+        avatar_url: prof?.avatar_url || null,
+      };
+    });
   },
 
   /**
@@ -179,5 +189,130 @@ export const workspacesService = {
     }
 
     return data;
+  },
+
+  /**
+   * Adds a member to a workspace by user email.
+   * Admin/Owner only.
+   */
+  async addWorkspaceMember(workspaceId, { email, role = 'member' }, callerUser, scopedSupabase) {
+    const admin = getSupabaseAdminClient();
+    const cleanEmail = email.toLowerCase().trim();
+
+    // 1. Lookup user by email in auth
+    const { data: usersData, error: userError } = await admin.auth.admin.listUsers();
+    if (userError) {
+      logger.error('Failed to list users in addWorkspaceMember', userError);
+      throw new AppError('Failed to lookup user', 500);
+    }
+
+    const targetUser = usersData?.users?.find(
+      (u) => u.email?.toLowerCase().trim() === cleanEmail
+    );
+
+    if (!targetUser) {
+      throw new AppError(
+        `User with email "${email}" is not registered on TeamFlow. Please ask them to sign up first.`,
+        404
+      );
+    }
+
+    // 2. Check if already a member
+    const { data: existingMember } = await scopedSupabase
+      .from('workspace_members')
+      .select('id, role')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', targetUser.id)
+      .maybeSingle();
+
+    if (existingMember) {
+      throw new AppError('This user is already a member of this workspace.', 409);
+    }
+
+    // 3. Insert membership
+    const { data: newMember, error: insertError } = await admin
+      .from('workspace_members')
+      .insert({
+        workspace_id: workspaceId,
+        user_id: targetUser.id,
+        role,
+      })
+      .select('id, user_id, role, joined_at')
+      .single();
+
+    if (insertError) {
+      logger.error('Failed to insert workspace member', insertError);
+      throw new AppError('Failed to add workspace member', 500);
+    }
+
+    // 4. Fetch profile
+    const { data: profile } = await scopedSupabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('id', targetUser.id)
+      .maybeSingle();
+
+    // 5. Log workspace activity
+    await logActivity({
+      workspaceId,
+      actorId: callerUser.id,
+      entityType: 'workspace_member',
+      entityId: newMember.id,
+      action: 'added',
+      metadata: {
+        member_email: targetUser.email,
+        member_name: profile?.full_name || targetUser.email.split('@')[0],
+        role,
+      },
+    });
+
+    // 6. Notify the user
+    await createNotification({
+      recipient_id: targetUser.id,
+      workspace_id: workspaceId,
+      actor_id: callerUser.id,
+      type: 'workspace_invite',
+      title: 'Added to Workspace',
+      message: `You were added to the workspace as a ${role}.`,
+      entity_type: 'workspace',
+      entity_id: workspaceId,
+    });
+
+    return {
+      id: newMember.id,
+      user_id: newMember.user_id,
+      role: newMember.role,
+      joined_at: newMember.joined_at,
+      full_name: profile?.full_name || null,
+      avatar_url: profile?.avatar_url || null,
+      email: targetUser.email,
+    };
+  },
+
+  /**
+   * Returns list of registered users for quick member selection
+   */
+  async getRegisteredUsers() {
+    const admin = getSupabaseAdminClient();
+    const { data: usersData } = await admin.auth.admin.listUsers();
+    const users = usersData?.users || [];
+    const userIds = users.map((u) => u.id);
+    let profileMap = new Map();
+    if (userIds.length > 0) {
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+      profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+    }
+    return users.map((u) => {
+      const p = profileMap.get(u.id);
+      return {
+        id: u.id,
+        email: u.email,
+        full_name: p?.full_name || null,
+        avatar_url: p?.avatar_url || null,
+      };
+    });
   },
 };

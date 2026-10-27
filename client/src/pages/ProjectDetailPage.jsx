@@ -18,7 +18,9 @@ import {
   Loader2,
   Sparkles,
   Archive,
+  UserPlus,
 } from 'lucide-react';
+import { AddMemberModal } from '../features/workspaces/AddMemberModal.jsx';
 import { useProject, useUpdateProject, useDeleteProject } from '../features/projects/useProjects.js';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '../features/tasks/useTasks.js';
 import { useTaskRealtime } from '../features/tasks/useTaskRealtime.js';
@@ -71,6 +73,7 @@ export const ProjectDetailPage = () => {
   const [editingTask, setEditingTask] = useState(null);
   const [defaultTaskStatus, setDefaultTaskStatus] = useState('todo');
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
   const userRole = workspace?.role || 'member';
   const canEditProject = ['owner', 'admin'].includes(userRole);
@@ -205,6 +208,18 @@ export const ProjectDetailPage = () => {
                 className="bg-brand-500 text-white hover:bg-brand-400 font-semibold shadow-sm"
               >
                 Add Task
+              </Button>
+            )}
+
+            {canEditProject && (
+              <Button
+                variant="outline"
+                size="md"
+                leftIcon={UserPlus}
+                onClick={() => setIsAddMemberOpen(true)}
+                className="border-white/20 text-white hover:bg-white/10 font-medium"
+              >
+                Add Member
               </Button>
             )}
 
@@ -381,6 +396,16 @@ export const ProjectDetailPage = () => {
         initialData={project}
         isSubmitting={updateProjectMutation.isPending}
       />
+
+      {/* Add Member Modal */}
+      {workspaceId && (
+        <AddMemberModal
+          isOpen={isAddMemberOpen}
+          onClose={() => setIsAddMemberOpen(false)}
+          workspaceId={workspaceId}
+          existingMembers={members || []}
+        />
+      )}
     </div>
   );
 };

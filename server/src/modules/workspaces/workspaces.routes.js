@@ -3,7 +3,7 @@ import { workspacesController } from './workspaces.controller.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { requireWorkspaceMember, requireWorkspaceRole } from '../../middleware/workspaceAuth.js';
-import { createWorkspaceSchema, updateWorkspaceSchema } from './workspaces.validation.js';
+import { createWorkspaceSchema, updateWorkspaceSchema, addMemberSchema } from './workspaces.validation.js';
 
 const router = Router();
 
@@ -13,6 +13,9 @@ const router = Router();
 
 // GET /api/v1/workspaces — list only workspaces the authenticated user belongs to
 router.get('/', requireAuth, workspacesController.getWorkspaces);
+
+// GET /api/v1/workspaces/users/registered — list all registered users for team invite lookup
+router.get('/users/registered', requireAuth, workspacesController.getRegisteredUsers);
 
 // POST /api/v1/workspaces — create workspace and owner membership atomically
 router.post(
@@ -40,6 +43,16 @@ router.get(
   requireAuth,
   requireWorkspaceMember,
   workspacesController.getWorkspaceMembers
+);
+
+// POST /api/v1/workspaces/:workspaceId/members — add a member to workspace (admin+ only)
+router.post(
+  '/:workspaceId/members',
+  requireAuth,
+  requireWorkspaceMember,
+  requireWorkspaceRole('admin'),
+  validate(addMemberSchema),
+  workspacesController.addWorkspaceMember
 );
 
 // PATCH /api/v1/workspaces/:workspaceId — update workspace settings (admin+ only; slug change: owner only)
